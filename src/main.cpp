@@ -80,7 +80,17 @@ bool loadCredentials() {
   //           "wifi_ssid", "wifi_pass", "mqtt_host", "mqtt_user", "mqtt_pass"
   //         then prefs.end(). Return true only if wifi_ssid, mqtt_host and mqtt_user are
   //         not empty (an open Wi-Fi network may have an empty password).
-  return false;
+  prefs.begin(NVS_NAMESPACE, true);
+  creds.wifiSsid = prefs.getString("wifi_ssid", "");
+  creds.wifiPass = prefs.getString("wifi_pass", "");
+  creds.mqttHost = prefs.getString("mqtt_host", "");
+  creds.mqttUser = prefs.getString("mqtt_user", "");
+  creds.mqttPass = prefs.getString("mqtt_pass", "");
+  prefs.end();
+
+  return creds.wifiSsid.length() > 0 &&
+         creds.mqttHost.length() > 0 &&
+         creds.mqttUser.length() > 0;
 }
 
 // Write `creds` to NVS.
@@ -88,6 +98,13 @@ void saveCredentials() {
   // TODO 2: open the namespace read-write (prefs.begin(NVS_NAMESPACE, false)), store the
   //         five values with prefs.putString("key", value) using the SAME key names as
   //         in TODO 1, then prefs.end().
+  prefs.begin(NVS_NAMESPACE, false);
+  prefs.putString("wifi_ssid", creds.wifiSsid);
+  prefs.putString("wifi_pass", creds.wifiPass);
+  prefs.putString("mqtt_host", creds.mqttHost);
+  prefs.putString("mqtt_user", creds.mqttUser);
+  prefs.putString("mqtt_pass", creds.mqttPass);
+  prefs.end();
 }
 
 // Erase every key in our namespace (FORGET command). Given.
