@@ -276,8 +276,19 @@ bool publishTelemetry() {
   //   (temp and press are already strings; use readPotPercent(), WiFi.RSSI(), millis()/1000,
   //    and ++seqNo). Then publish it to TOPIC_TELEMETRY, NOT retained, and return the result.
   char buf[192];
-  (void)buf; (void)temp; (void)press;
-  return false;
+  snprintf(buf, sizeof buf,
+           "{\"seq\":%lu,\"temp_c\":%s,\"press_hpa\":%s,\"pot_pct\":%d,\"rssi\":%d,\"uptime_s\":%lu}",
+           (unsigned long)++seqNo, temp, press, readPotPercent(), WiFi.RSSI(),
+           (unsigned long)(millis() / 1000));
+
+  const bool published = mqtt.publish(TOPIC_TELEMETRY.c_str(), buf, false);
+  if (published) {
+    Serial.print("PUB ");
+    Serial.print(TOPIC_TELEMETRY);
+    Serial.print("  ");
+    Serial.println(buf);
+  }
+  return published;
 }
 
 // ============================================================================================
