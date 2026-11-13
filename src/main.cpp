@@ -158,6 +158,15 @@ void configureMqtt() {
   //   (b) mqtt.setServer(creds.mqttHost.c_str(), MQTT_PORT);
   //       (PubSubClient keeps the POINTER, so creds.mqttHost must not change afterwards.)
   //   (c) mqtt.setKeepAlive(MQTT_KEEPALIVE_S); mqtt.setSocketTimeout(5); mqtt.setBufferSize(512);
+  // WARNING: The connection is encrypted, but we are NOT verifying the broker. Someone
+  // running a fake hotspot could pretend to be your broker and collect your MQTT password.
+  // Lab 6 fixes this by checking the broker's certificate. Do not add certificate checking
+  // in this lab.
+  net.setInsecure();
+  mqtt.setServer(creds.mqttHost.c_str(), MQTT_PORT);
+  mqtt.setKeepAlive(MQTT_KEEPALIVE_S);
+  mqtt.setSocketTimeout(5);
+  mqtt.setBufferSize(512);
 }
 
 const char* mqttStateText(int s) {
@@ -191,7 +200,11 @@ bool mqttConnect() {
   //       Use .c_str() for the String values. If it returns false, return false.
   //   (b) publish "online" to TOPIC_STATUS with retained = true, so a dashboard that starts
   //       later still sees the current state. (PubSubClient publishes at QoS 0 only.)
-  return false;
+  if (!mqtt.connect(clientId.c_str(), creds.mqttUser.c_str(), creds.mqttPass.c_str(),
+                    TOPIC_STATUS.c_str(), 1, true, "offline")) {
+    return false;
+  }
+  return mqtt.publish(TOPIC_STATUS.c_str(), "online", true);
 }
 
 // Called every pass of loop(). Never blocks for long, except inside one connect attempt.
@@ -221,6 +234,24 @@ void maintainMqtt() {
   //     failure -> print mqttStateText(mqtt.state()), double backoffMs (max BACKOFF_MAX_MS)
   //                and add a little jitter, e.g. + (millis() % 500), so 40 teams do not all
   //                retry at the same instant after the router reboots.
+  const uint32_t now = millis();
+  if (now - lastMqttTry < backoffMs) return;
+
+  lastMqttTry = now;
+  if (mqttConnect()) {
+    Serial.println("MQTT: connected");
+    backoffMs = BACKOFF_START_MS;
+    reconnects++;
+  } else {
+    Serial.print("MQTT: ");
+    Serial.println(mqttStateText(mqtt.state()));
+    if (backoffMs < BACKOFF_MAX_MS / 2) {
+      backoffMs *= 2;
+    } else {
+      backoffMs = BACKOFF_MAX_MS;
+    }
+    backoffMs += millis() % 500;
+  }
 }
 
 int readPotPercent() {
