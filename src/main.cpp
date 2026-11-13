@@ -41,7 +41,10 @@ constexpr uint32_t BACKOFF_MAX_MS   = 30000;   // ... doubling up to 30 s
 //   Think about: how fast does room temperature really change? How many messages per day
 //   does your choice create (86,400,000 / PERIOD_MS)? What does the 72-hour reliability
 //   test cost at this rate? How quickly must the dashboard react?
-constexpr uint32_t PERIOD_MS = 1000;   // placeholder: change it and justify your value
+// Room temperature changes slowly, so a 20-second period is frequent enough for the
+// dashboard to react promptly while limiting traffic to 4,320 messages per day
+// (12,960 messages during a 72-hour reliability test).
+constexpr uint32_t PERIOD_MS = 20000;
 
 // ---------------- Globals ----------------
 struct Credentials {
